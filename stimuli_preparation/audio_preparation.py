@@ -30,4 +30,4 @@ def create_audio(path):
 
 
 if __name__ == '__main__':
-    create_audio('al.csv')
+    create_audio('srcs/al.csv')
