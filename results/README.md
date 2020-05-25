@@ -8,3 +8,8 @@
   * All parameters are commented in the list 'parameters'
   
 * File [results.ipynb](https://github.com/AnnaZhuravleva/novel_words/blob/master/results/results.ipynb) contains Python script for the results processing
+
+* File [participants_meta.xlsx](https://github.com/AnnaZhuravleva/novel_words/blob/master/results/participants_meta.xlsx) contains:
+  * participants'informed written consents
+  * participants' feedback on the experiment
+  * participants' metainformation
