@@ -10,6 +10,9 @@
 * Folder [instructions](https://github.com/AnnaZhuravleva/novel_words/tree/master/materials/instructions) contains the instructions sent for participants
 
 * File [stimuli.xlsx](https://github.com/AnnaZhuravleva/novel_words/blob/master/materials/stimuli.xlsx) contains all the stimuli prepared for the experiment.
+
+  * You should **download** the file so that you can view it
+  
   * List **"AL"** contains all the pseudowords used in the experiment
     * 'mean_distance' parameter corresponds to the mean Levenshtein distance from participants' transcription to correct transcription in the online validation experiment Stupina & Chrabaszcz (2020)
     * 'count' parameter correspons to the number of participants scored the particular word
