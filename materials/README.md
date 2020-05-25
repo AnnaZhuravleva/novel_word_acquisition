@@ -42,4 +42,4 @@
     * how many times was used as a distractor in the 3AFC task (for a single word)
     * How many times the words were used together, so that any of them was a correct answer, and the other was a distractor (for a pair of words)
     
-  * List **sem_scores** contains pairwise vector similarity scores of all L1 stimuli (measured via word2vec)
+  * List **sets** contains general information about first and second stimuli sets
