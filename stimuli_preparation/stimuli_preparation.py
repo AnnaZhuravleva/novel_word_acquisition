@@ -7,9 +7,10 @@ Original file is located at
     https://colab.research.google.com/drive/1Oy6CnlVkvtVzj1I8MlaDegmn_OI6wMbH
 """
 
-#  !wget https://rusvectores.org/static/models/ruscorpora_upos_skipgram_300_10_2017.bin.gz
-#  !wget http://rusvectores.org/static/models/rusvectores2/ruscorpora_mystem_cbow_300_2_2015.bin.gz
-#  from google.colab import files
+#!wget https://rusvectores.org/static/models/ruscorpora_upos_skipgram_300_10_2017.bin.gz
+#!wget http://rusvectores.org/static/models/rusvectores2/ruscorpora_mystem_cbow_300_2_2015.bin.gz
+# from google.colab import files
+
 
 import gensim
 import random
@@ -28,6 +29,7 @@ model_2015 = gensim.models.KeyedVectors.load_word2vec_format(m_2015, binary=True
 model_2015.init_sims(replace=True)
 
 L1_path = 'srcs/l1.csv'
+L1_meta = 'srcs/L1_candidates.csv'
 AL_path = 'srcs/al.csv'
 
 
@@ -42,7 +44,6 @@ class word2vec:
         for word in words:
           vecs[word] = {w: self.two_words(word, w) for w in words if w != word}
         return vecs
-
 
     def get_scores(self, stimuli_list, save=False):
         all_similarities = {}
@@ -66,11 +67,14 @@ class word2vec:
                                           key=lambda x: x[1], reverse=True)
         if save:
             all_scores.to_excel('sim_scores_all.xlsx')
-            #  files.download('sim_scores_all.xlsx')
+            files.download('sim_scores_all.xlsx')
         return sim_means, all_similarities
 
     def two_words(self, w1, w2):
-      return self.model_17.similarity( f'{w1}_NOUN', f'{w2}_NOUN')
+      if f'{w1}_NOUN' in self.model_17.vocab \
+         and  f'{w2}_NOUN' in self.model_17.vocab:
+          return self.model_17.similarity( f'{w1}_NOUN', f'{w2}_NOUN')
+      return
 
 
 class L1:
@@ -79,8 +83,7 @@ class L1:
       self.model = model
       self.l1_path = L1_path
 
-
-    def get_l1_list(self, file='L1_candidates.csv', save=False, 
+    def get_l1_list(self, file=L1_meta, save=False, 
                     top_sim=0.47):
         candidates = pd.read_csv(file, sep=';')
         words = candidates['dominant_name']
@@ -111,7 +114,7 @@ class L1:
         all_stim = pd.merge(candidates, my_table, on='dominant_name', how='right')
         if save:
           all_stim.to_excel('all_data.xlsx', index=False)
-          #  files.download('all_data.xlsx')
+          files.download('all_data.xlsx')
         return all_stim
 
     def divide_l1(self, offset=2):
@@ -119,7 +122,7 @@ class L1:
                     'руль':'самолет',
                     'корона':'костюм',
                     'костюм':'корона'}
-        df = pd.read_csv(self.l1_path, sep=';')
+        df = pd.read_csv(self.l1_path, sep=';')[:80]
         words = [i.dominant_name for _, i in df.iterrows()]
         vecs = self.model.get_similarity_matrix(words)
         set_1 = []
@@ -167,7 +170,7 @@ class L1:
 
             if save:
                 tmp.to_excel(f'l1_set_{idx+1}.xlsx', index=False)
-                #  files.download(f'l1_set_{idx+1}.xlsx')
+                files.download(f'l1_set_{idx+1}.xlsx')
 
 
 class AFC_task:
@@ -214,7 +217,6 @@ class AFC_task:
           wordset.remove(head)
         return res
 
-
     def __call__(self, set_1, set_2, save=False):
         a = self.getafc(set_1)
         b = self.getafc(set_2)
@@ -222,17 +224,17 @@ class AFC_task:
         a['ведро'], a['колокол'] = a['колокол'], a['ведро']
         
         with open(self.l1_path, 'r') as f:
-            df = pd.read_csv(f, sep=';')
+            df = pd.read_csv(f, sep=';')[:80]
 
         if save: 
             for idx, word_set in enumerate([a, b]):
               set1 = []
               for word in word_set:
                 set1.append([
-                            word, a[word][0], a[word][1], 
-                            self.model.two_words(word, a[word][0]),
-                            self.model.two_words(word, a[word][1]),
-                            self.model.two_words(a[word][0], a[word][1])
+                            word, word_set[word][0], word_set[word][1], 
+                            self.model.two_words(word, word_set[word][0]),
+                            self.model.two_words(word, word_set[word][1]),
+                            self.model.two_words(word_set[word][0], word_set[word][1])
                             ])
 
               set1 = pd.DataFrame(set1, columns=['dominant_name',
@@ -243,7 +245,7 @@ class AFC_task:
           
               set1 = pd.merge(set1, df, on=['dominant_name'])
               set1.to_excel(f'afc{idx+1}.xlsx', index=False)
-              #  files.download(f'afc{idx+1}.xlsx')
+              files.download(f'afc{idx+1}.xlsx')
               self.afc_stats([a, b])
 
         return a, b
@@ -268,7 +270,7 @@ class AFC_task:
           tables.append(C)
       D = pd.concat(tables, axis=1, join='outer')
       D.to_excel('afc_stats.xlsx',index=False)
-      #  files.download('afc_stats.xlsx')
+      files.download('afc_stats.xlsx')
       return D
 
 
@@ -328,7 +330,7 @@ class AL:
               al[param] = [float(i.replace(',', '.')) for i in al[param]]
           if save:
             al.to_excel(f'al{idx+1}.xlsx')
-            #  files.download(f'al{idx+1}.xlsx')
+            files.download(f'al{idx+1}.xlsx')
           
           yield al['word']
 
@@ -341,7 +343,6 @@ class Experiment:
       self.AL = AL(AL_path)
       self.AFC = AFC_task(self.w2v, L1_path)
       self.recog = recognition()
-
 
     @staticmethod
     def random_numbers(save=False):
@@ -369,7 +370,7 @@ class Experiment:
             prev.append(item[:4])
         if save:
             pd.DataFrame(all_sets).to_excel('numbers.xlsx', index=False)
-            #  files.download('numbers.xlsx')
+            files.download('numbers.xlsx')
         return all_sets
 
     def single_list(self, nbs, word_set, al, afc_dict, i):
@@ -411,12 +412,11 @@ class Experiment:
             ])
         return df
 
-
     def get_all(self, save=False, list_nb=15):
         al = self.AL()
 
         set_1, set_2 = self.L1.divide_l1(offset=1)
-        afc_1, afc_2 = self.AFC(set_1, set_2)
+        afc_1, afc_2 = self.AFC(set_1, set_2, save=True)
 
         numbers = self.random_numbers()
         for i in range(list_nb):
@@ -425,11 +425,12 @@ class Experiment:
           if save:
               df_1.to_excel(f'session_1_{i}.xlsx', index=False)
               df_2.to_excel(f'session_2_{i}.xlsx', index=False)
-              #  files.download(f'session_1_{i}.xlsx')
-              #  files.download(f'session_2_{i}.xlsx') 
+              files.download(f'session_1_{i}.xlsx')
+              files.download(f'session_2_{i}.xlsx') 
           yield df_1, df_2
 
 
 if __name__ == '__main__':
     exp = Experiment(model_2015, model_2017, L1_path, AL_path)
-    res = list(exp.get_all())
+    lists = list(exp.get_all())
+
