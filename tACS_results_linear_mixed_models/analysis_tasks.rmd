@@ -1,0 +1,766 @@
+---
+title: "tACS LME"
+output:
+  pdf_document: default
+  html_notebook: default
+  html_document:
+    df_print: paged
+---
+```{r}
+#install.packages("readxl")
+#install.packages("lme4")
+#install.packages("lmerTest")
+```
+# Plots
+```{r}
+library(ggplot2)
+library(tidyverse)
+library(hrbrthemes)
+library(viridis)
+library("readxl")
+library('lme4')
+library('lmerTest')
+library('ggplot2')
+data <- read_excel('tables/stats_LME_3.xlsx')
+data <- data[complete.cases(data), ]
+```
+## Recall
+```{r}
+data_recall <- data[which(data$task == 'recall'), ]
+p1 <- ggplot( data_recall, aes(x=session, y=score, fill=condition)) +
+      geom_boxplot() +
+      geom_jitter(color="black", size=0.4, alpha=0.9) +
+      theme(
+        plot.title = element_text(size=11)
+      ) +
+      ggtitle("Recall") +
+      xlab("")
+p1
+```
+```{r}
+recall_train <- data_recall[which(data_recall$session == 'train'), ]
+recall_test1 <- data_recall[which(data_recall$session == 'test1'), ]
+recall_test2 <- data_recall[which(data_recall$session == 'test2'), ]
+```
+```{r}
+ggplot(recall_train) + geom_density(aes(x=score, fill=condition))
+```
+```{r}
+ggplot(recall_test1) + geom_density(aes(x=score, fill=condition))
+```
+```{r}
+ggplot(recall_test2) + geom_density(aes(x=score, fill=condition))
+```
+
+
+## AFC
+```{r}
+AFC <- data[which(data$task == 'AFC'), ]
+AFC_scores <- aggregate(AFC$score, by=list(AFC$participant, AFC$session, AFC$condition), FUN=sum)
+AFC_scores <- setNames(AFC_scores, c('Participant', 'session', 'condition', 'score'))
+p2 <- ggplot(AFC_scores, 
+             aes(x=session, y=score, fill=condition)) +
+  geom_boxplot() +
+  geom_jitter(color="black", size=0.4, alpha=0.9) +
+  theme(
+    plot.title = element_text(size=11)
+    ) +
+  ggtitle("AFC") +
+  xlab("")
+p2
+```
+```{r}
+ggplot(AFC_scores) + geom_density(aes(x=score, fill=condition))
+```
+```{r}
+ggplot(AFC) + geom_density(aes(x=score, fill=condition))
+```
+
+
+## Recognition
+```{r}
+recognition <- data[which(data$task == 'recognition'), ]
+recognition1 <- recognition[which(recognition$session == 'test1'), ]
+recognition2 <- recognition[which(recognition$session == 'test2'), ]
+recognition_scores <- aggregate(recognition$score, by=list(recognition$participant, recognition$session, recognition$condition), FUN=sum)
+recognition_scores <- setNames(recognition_scores, c('Participant', 'session', 'condition', 'score'))
+
+recognition_scores1 <- recognition_scores[
+  which(recognition_scores$session == 'test1'), ]
+recognition_scores2 <- recognition_scores[
+  which(recognition_scores$session == 'test2'), ]
+p3 <- ggplot( recognition_scores, aes(x=session, y=score, fill=condition)) + geom_boxplot() +
+      geom_jitter(color="black", size=0.4, alpha=0.9) +
+      theme(
+        plot.title = element_text(size=11)
+      ) +
+      ggtitle("recognition") +
+      xlab("")
+p3
+```
+```{r}
+ggplot(recognition) + geom_density(aes(x=score, fill=condition))
+```
+```{r}
+ggplot(recognition_scores) + geom_density(aes(x=score, fill=condition))
+```
+```{r}
+ggplot(recognition_scores1) + geom_density(aes(x=score, fill=condition))
+```
+```{r}
+ggplot(recognition_scores2) + geom_density(aes(x=score, fill=condition))
+```
+```{r}
+ggplot(recognition1) + geom_density(aes(x=score, fill=condition))
+```
+```{r}
+ggplot(recognition2) + geom_density(aes(x=score, fill=condition))
+```
+## SEM
+```{r}
+SEM <- data[which(data$task == 'SEM'), ]
+SEM_scores <- aggregate(SEM$score, by=list(SEM$participant, SEM$session, SEM$condition), FUN=sum)
+SEM_scores <- setNames(SEM_scores, c('Participant', 'session', 'condition', 'score'))
+p4 <- ggplot(SEM_scores, aes(x=session, y=score, fill=condition)) + geom_boxplot() +
+      geom_jitter(color="black", size=0.4, alpha=0.9) +
+      theme(
+        plot.title = element_text(size=11)
+      ) +
+      ggtitle("SEM") +
+      xlab("")
+p4
+```
+```{r}
+ggplot(SEM) + geom_density(aes(x=score, fill=condition))
+```
+```{r}
+ggplot(SEM_scores) + geom_density(aes(x=score, fill=condition))
+```
+# Statistical analysis
+
+```{r}
+library("readxl")
+library('lme4')
+library('lmerTest')
+```
+```{r}
+data <- read_excel('tables/stats_LME_3.xlsx')
+data <- data[complete.cases(data), ]
+```
+
+# Recall
+## Random slope lme
+```{r}
+data_recall <- data[which(data$task == 'recall'), ]
+
+recall.model <- lmer(score ~ condition + session + 
+                       (1|participant) + (1|AL) + (1|L1) +
+                       (1 + condition|participant),
+                     data=data_recall, REML=FALSE)
+
+recall.model_order <- lmer(score ~ condition + 
+                             session + stim_order +  (1|participant) +
+                             (1|AL) + (1|L1) + (1 + condition|participant) +
+                             (1 + stim_order|participant), 
+                           data=data_recall, REML=FALSE)
+
+recall.null <- lmer(score ~ session + (1|participant) + (1|AL) + (1|L1),
+                     data=data_recall, REML=FALSE)
+```
+### Random intercept
+```{r}
+recall.model_intercept <- lmer(score ~ condition + session + 
+                                 (1|participant) + (1|AL) + (1|L1),
+                               data=data_recall, REML=FALSE)
+recall.model_order_intercept <- lmer(score ~ condition + 
+                                       session + stim_order + 
+                                       (1|participant) + (1|AL) + (1|L1),
+                                     data=data_recall, REML=FALSE)
+recall.null <- lmer(score ~ session + (1|participant) + (1|AL) + (1|L1),
+                     data=data_recall, REML=FALSE)
+```
+```{r}
+recall.model_intercept_test1 <- lmer(score ~ condition + session + 
+                                 (1|participant) + (1|AL) + (1|L1),
+                               data=data_recall, REML=FALSE)
+```
+
+```{r}
+summary(recall.model)
+```
+```{r}
+summary(recall.model_order)
+```
+```{r}
+anova(recall.null, recall.model)
+```
+```{r}
+anova(recall.model_order, recall.model)
+```
+
+```{r}
+summary(recall.model_intercept)
+```
+```{r}
+summary(recall.model_order_intercept)
+```
+```{r}
+anova(recall.null, recall.model_intercept)
+```
+```{r}
+anova(recall.model_order_intercept, recall.model)
+```
+### Reaction time
+```{r}
+data_recall_RT <- data_recall[which(data_recall$score >= 0.65), ]
+
+recall_RT.model <- lmer(
+  RT ~ condition + session +  (1|participant) + (1|AL) + (1|L1) + 
+    (1 + condition|participant),
+  data=data_recall_RT, REML=FALSE)
+
+recall_RT.model_order <- lmer(
+  RT ~ condition + session + stim_order +  (1|participant) + (1|AL) + 
+    (1|L1) + (1 + condition|participant)  + (1 + stim_order|participant),
+  data=data_recall_RT, REML=FALSE)
+
+recall_RT.model_intercept <- lmer(
+  RT ~ condition + session +  (1|participant) + (1|AL) + (1|L1),
+  data=data_recall_RT, REML=FALSE)
+
+recall_RT.model_order_intercept <- lmer(
+  RT ~ condition + session + stim_order +  (1|participant) + (1|AL) +(1|L1),
+  data=data_recall_RT, REML=FALSE)
+
+recall_RT.null <- lmer(RT ~ session + (1|participant) + (1|AL) + (1|L1),
+                     data=data_recall_RT, REML=FALSE)
+```
+```{r}
+summary(recall_RT.model)
+```
+```{r}
+summary(recall_RT.model_order)
+```
+
+```{r}
+anova(recall_RT.model, recall_RT.null)
+```
+```{r}
+anova(recall_RT.model_order, recall_RT.model)
+```
+```{r}
+summary(recall_RT.model_intercept)
+```
+```{r}
+anova(recall_RT.null, recall_RT.model_intercept)
+```
+```{r}
+anova(recall_RT.model_order_intercept, recall_RT.model_intercept)
+```
+# AFC
+```{r}
+data_afc <- data[which(data$task == 'AFC'), ]
+
+afc.model <- glmer(
+  score ~ condition + (1|participant) + (1|AL) + (1|L1) + 
+    (1 + condition|participant),
+  data=data_afc, family = binomial, 
+  control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)))
+
+afc.model_order <- glmer(
+  score ~ condition + stim_order +  (1|participant) + (1|AL) + (1|L1) +
+    (1 + condition|participant) + (1 + stim_order|participant),
+  data=data_afc, family = binomial, 
+  control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)))
+
+afc.model_intercept <- glmer(
+  score ~ condition +  (1|participant) + (1|AL) + (1|L1),
+  data=data_afc, family = binomial, 
+  control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)))
+
+afc.model_order_intercept <- glmer(
+  score ~ condition + stim_order +  (1|participant) + (1|AL) + (1|L1),
+  data=data_afc, family = binomial, 
+  control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)))
+
+afc.null <- glmer(
+  score ~ (1|participant) + (1|AL) + (1|L1),
+  data=data_afc,family = binomial, 
+  control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)))
+```
+
+
+```{r}
+summary(afc.model)
+```
+```{r}
+summary(afc.model_order)
+```
+```{r}
+anova(afc.null, afc.model)
+```
+```{r}
+anova(afc.model_order, afc.model)
+```
+```{r}
+summary(afc.model_intercept)
+```
+```{r}
+summary(afc.model_order_intercept)
+```
+```{r}
+anova(afc.null, afc.model_intercept)
+```
+```{r}
+anova(afc.model_order_intercept, afc.model_intercept)
+```
+### Reaction time
+```{r}
+data_afc_RT <- data_afc[which(data_afc$score == 1), ]
+
+afc_RT.model <- lmer(
+  RT ~ condition + (1|participant) + (1|AL) + (1|L1) + 
+    (1 + condition|participant),
+  data=data_afc_RT, REML=FALSE)
+
+afc_RT.model_order <- lmer(
+  RT ~ condition + stim_order +  (1|participant) + (1|AL) + (1|L1) +
+    (1 + condition|participant) + (1 + stim_order|participant),
+  data=data_afc_RT, REML=FALSE)
+
+afc_RT.model_intercept <- lmer(
+  RT ~ condition + (1|participant) + (1|AL) + (1|L1),
+  data=data_afc_RT, REML=FALSE)
+
+afc_RT.model_order_intercept <- lmer(
+  RT ~ condition + stim_order + (1|participant) + (1|AL) + (1|L1),
+  data=data_afc_RT, REML=FALSE)
+
+afc_RT.null <- lmer(
+  RT ~  (1|participant) + (1|AL) + (1|L1),
+  data=data_afc_RT, REML=FALSE)
+```
+```{r}
+summary(afc_RT.model)
+```
+```{r}
+summary(afc_RT.model_order)
+```
+
+```{r}
+anova(afc_RT.null, afc_RT.model)
+```
+```{r}
+anova(afc_RT.model_order, afc_RT.model)
+```
+
+```{r}
+summary(afc_RT.model_intercept)
+```
+```{r}
+summary(afc_RT.model_order_intercept)
+```
+
+```{r}
+anova(afc_RT.null, afc_RT.model_intercept)
+```
+```{r}
+anova(afc_RT.model_order_intercept, afc_RT.model_intercept)
+```
+# Recognition
+```{r}
+data_recognition <- data[which(data$task == 'recognition'), ]
+
+recognition.model <- glmer(
+  score ~ condition + session +  (1|participant) + (1|AL) + (1|L1) +
+    (1 + condition|participant),
+  data=data_recognition, family = binomial, 
+  control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)))
+
+recognition.model_order <- glmer(
+  score ~ condition + session + stim_order + 
+    (1|participant) + (1|AL) + (1|L1) +
+    (1 + condition|participant) + (1 + stim_order|participant),
+  data=data_recognition, family = binomial, 
+  control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)))
+
+recognition.model_intercept <- glmer(
+  score ~ condition + session + (1|participant) + (1|AL) + (1|L1),
+  data=data_recognition, family = binomial, 
+  control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)))
+
+recognition.model_order_intercept <- glmer(
+  score ~ condition + session + stim_order +
+    (1|participant) + (1|AL) + (1|L1),
+  data=data_recognition, family = binomial, 
+  control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)))
+
+recognition.null <- glmer(
+  score ~ session +  (1|participant) + (1|AL) + (1|L1),
+  data=data_recognition,family = binomial, 
+  control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)))
+```
+```{r}
+summary(recognition.model)
+```
+```{r}
+summary(recognition.model_order)
+```
+```{r}
+anova(recognition.null, recognition.model)
+```
+```{r}
+anova(recognition.model_order, recognition.model)
+```
+```{r}
+summary(recognition.model_intercept)
+```
+```{r}
+summary(recognition.model_order_intercept)
+```
+```{r}
+anova(recognition.null, recognition.model_intercept)
+```
+```{r}
+anova(recognition.model_order_intercept, recognition.model_intercept)
+```
+
+### Reaction time
+```{r}
+data_recognition_RT <- data_recognition[which(data_recognition$score == 1),]
+
+recognition_RT.model <- lmer(
+  RT ~ condition + session +  (1|participant) + (1|AL) + (1|L1) +
+    (1 + condition|participant),
+  data=data_recognition_RT, REML=FALSE)
+
+recognition_RT.model_order <- lmer(
+  RT ~ condition + session + stim_order + 
+    (1|participant) + (1|AL) + (1|L1) +
+    (1 + condition|participant) + (1 + stim_order|participant),
+  data=data_recognition_RT, REML=FALSE)
+
+recognition_RT.model_intercept <- lmer(
+  RT ~ condition + session +  (1|participant) + (1|AL) + (1|L1),
+  data=data_recognition_RT, REML=FALSE)
+
+recognition_RT.model_order_intercept <- lmer(
+  RT ~ condition + session + stim_order +  
+    (1|participant) + (1|AL) + (1|L1),
+  data=data_recognition_RT, REML=FALSE)
+
+recognition_RT.null <- lmer(
+  RT ~ session + (1|participant) + (1|AL) + (1|L1),
+  data=data_recognition_RT, REML=FALSE)
+```
+```{r}
+summary(recognition_RT.model)
+```
+```{r}
+summary(recognition_RT.model_order)
+```
+```{r}
+anova(recognition_RT.null, recognition_RT.model)
+```
+```{r}
+anova(recognition_RT.model, recognition_RT.model_order)
+```
+```{r}
+summary(recognition_RT.model_intercept)
+```
+```{r}
+summary(recognition_RT.model_order_intercept)
+```
+```{r}
+anova(recognition_RT.null, recognition_RT.model_intercept)
+```
+```{r}
+anova(recognition_RT.model_intercept, recognition_RT.model_order_intercept)
+```
+# Semantic decision
+```{r}
+data_sem <- data[which(data$task == 'SEM'), ]
+
+sem.model <- glmer(
+  score ~ condition + session +  (1|participant) + (1|AL) + (1|L1) +
+    (1 + condition|participant),
+  data=data_sem, family = binomial, 
+  control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)))
+
+sem.model_order <- glmer(
+  score ~ condition + session + stim_order + 
+    (1|participant) + (1|AL) + (1|L1) + (1 + condition|participant) + 
+    (1 + stim_order|participant),
+  data=data_sem, family = binomial, 
+  control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)))
+
+sem.model_intercept <- glmer(
+  score ~ condition + session + (1|participant) + (1|AL) + (1|L1),
+  data=data_sem, family = binomial, 
+  control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)))
+
+sem.model_order_intercept <- glmer(
+  score ~ condition + session + stim_order + 
+    (1|participant) + (1|AL) + (1|L1),
+  data=data_sem, family = binomial, 
+  control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)))
+
+sem.null <- glmer(
+  score ~ session +  (1|participant) + (1|AL) + (1|L1), 
+  data=data_sem,family = binomial,
+  control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)))
+```
+```{r}
+summary(sem.model)
+```
+```{r}
+summary(sem.model_order)
+```
+```{r}
+anova(sem.null, sem.model)
+```
+```{r}
+anova(sem.model_order, sem.model)
+```
+```{r}
+summary(sem.model_intercept)
+```
+```{r}
+summary(sem.model_order_intercept)
+```
+```{r}
+anova(sem.null, sem.model_intercept)
+```
+```{r}
+anova(sem.model_order_intercept, sem.model_intercept)
+```
+### Reaction time
+```{r}
+data_sem_RT <- data_sem[which(data_sem$score == 1), ]
+
+sem_RT.model <- lmer(
+  RT ~ condition + session +  (1|participant) + (1|AL) + (1|L1) +
+    (1 + condition|participant),
+  data=data_sem_RT, REML=FALSE)
+
+sem_RT.model_order <- lmer(
+  RT ~ condition + session + stim_order + (1|participant) + (1|AL) + 
+    (1|L1) + (1 + condition|participant) + (1 + stim_order|participant),
+  data=data_sem_RT, REML=FALSE)
+
+sem_RT.model_intercept <- lmer(
+  RT ~ condition + session + (1|participant) + (1|AL) + (1|L1),
+  data=data_sem_RT, REML=FALSE)
+
+sem_RT.model_order_intercept <- lmer(
+  RT ~ condition + session + stim_order + (1|participant) + (1|AL) + (1|L1),
+  data=data_sem_RT, REML=FALSE)
+
+sem_RT.null <- lmer(
+  RT ~ session +  (1|participant) + (1|AL) + (1|L1),
+  data=data_sem_RT, REML=FALSE)
+```
+```{r}
+summary(sem_RT.model)
+```
+```{r}
+summary(sem_RT.model_order)
+```
+```{r}
+anova(sem_RT.null, sem_RT.model)
+```
+```{r}
+anova(sem_RT.model_order, sem_RT.model)
+```
+```{r}
+summary(sem_RT.model_intercept)
+```
+```{r}
+summary(sem_RT.model_order_intercept)
+```
+```{r}
+anova(sem_RT.null, sem_RT.model_intercept)
+```
+```{r}
+anova(sem_RT.model_order_intercept, sem_RT.model_intercept)
+```
+## Other tests
+
+```{r}
+t.test(score ~ condition, 
+       data = data_recall[which(data_recall$session == 'train'), ])
+```
+```{r}
+t.test(score ~ condition, 
+       data = data_recall[which(data_recall$session == 'test1'), ])
+```
+```{r}
+t.test(score ~ condition, 
+       data = data_recall[which(data_recall$session == 'test2'), ])
+```
+
+```{r}
+recall_test2 <- data_recall[which(data_recall$session == 'test2'), ]
+recall_test2[is.na(recall_test2)] <- 0
+t.test(score ~ condition, data = recall_test2)
+```
+```{r}
+t.test(score ~ condition, 
+       data = data_afc[which(data_afc$session == 'train'), ])
+```
+```{r}
+t.test(score ~ condition, 
+       data = data_sem[which(data_sem$session == 'test1'), ])
+```
+
+```{r}
+t.test(score ~ condition, 
+       data = data_sem[which(data_sem$session == 'test2'), ])
+```
+```{r}
+t.test(score ~ condition, 
+       data = data_recognition[which(data_sem$session == 'test1'), ])
+```
+```{r}
+t.test(score ~ condition, 
+       data = data_recognition[which(data_recognition$session == 'test2'), ])
+```
+```{r}
+wilcox.test(score ~ condition, 
+            data = data_recall[which(data_recall$session == 'train'), ], 
+            alternative = "two.sided")
+```
+```{r}
+wilcox.test(score ~ condition, 
+            data = data_recall[which(data_recall$session == 'test1'), ], 
+            alternative = "two.sided")
+```
+```{r}
+wilcox.test(score ~ condition, 
+            data = data_recall[which(data_recall$session == 'test2'), ], 
+            alternative = "two.sided")
+```
+```{r}
+wilcox.test(score ~ condition, 
+            data = data_afc[which(data_afc$session == 'train'), ], 
+            alternative = "two.sided")
+```
+```{r}
+wilcox.test(score ~ condition, 
+            data = data_sem[which(data_sem$session == 'test1'), ], 
+            alternative = "two.sided")
+```
+```{r}
+wilcox.test(score ~ condition, 
+            data = data_sem[which(data_sem$session == 'test2'), ], 
+            alternative = "two.sided")
+```
+```{r}
+wilcox.test(score ~ condition, 
+            data = data_recognition[
+              which(data_recognition$session == 'test1'), ], 
+            alternative = "two.sided")
+```
+```{r}
+wilcox.test(score ~ condition, 
+            data = data_recognition[
+              which(data_recognition$session == 'test2'), ], 
+            alternative = "two.sided")
+```
+```{r}
+var.test(score ~ condition, 
+         data = data_recall[
+           which(data_recall$session == 'train'), ], 
+         alternative = "two.sided")
+```
+```{r}
+var.test(score ~ condition, 
+         data = data_recall[
+           which(data_recall$session == 'test1'), ], 
+         alternative = "two.sided")
+```
+```{r}
+var.test(score ~ condition, 
+         data = data_recall[
+           which(data_recall$session == 'test2'), ], 
+         alternative = "two.sided")
+```
+```{r}
+var.test(score ~ condition, 
+         data = data_recognition[
+           which(data_recognition$session == 'test1'), ], 
+         alternative = "two.sided")
+```
+```{r}
+var.test(score ~ condition, 
+         data = data_recognition[
+           which(data_recognition$session == 'test2'), ], 
+         alternative = "two.sided")
+```
+```{r}
+var.test(score ~ condition, 
+         data = data_sem[
+           which(data_sem$session == 'test1'), ], 
+         alternative = "two.sided")
+```
+```{r}
+var.test(score ~ condition, 
+         data = data_sem[
+           which(data_sem$session == 'test2'), ], 
+         alternative = "two.sided")
+```
+```{r}
+var.test(score ~ condition, 
+         data = data_afc[
+           which(data_afc$session == 'train'), ], 
+         alternative = "two.sided")
+```
+```{r}
+lm_recall_train <- lm(score ~ condition,  
+   data = data_recall[which(data_recall$session == 'train'), ])
+summary(lm_recall_train)
+anova(lm_recall_train)
+```
+
+```{r}
+lm_recall_test1 <- lm(score ~ condition,  
+   data = data_recall[which(data_recall$session == 'test1'), ])
+summary(lm_recall_test1)
+anova(lm_recall_test1)
+```
+```{r}
+lm_recall_test2 <- lm(score ~ condition,  
+   data = data_recall[which(data_recall$session == 'test2'), ])
+summary(lm_recall_test2)
+anova(lm_recall_test2)
+```
+```{r}
+lm_afc <- lm(score ~ condition,  
+   data = data_afc[which(data_afc$session == 'train'), ])
+summary(lm_afc)
+anova(lm_afc)
+```
+```{r}
+lm_recognition1 <- lm(score ~ condition,  
+   data = data_recognition[which(data_recognition$session == 'test1'), ])
+summary(lm_recognition1)
+anova(lm_recognition1)
+```
+```{r}
+lm_recognition2 <- lm(score ~ condition,  
+   data = data_recognition[which(data_recognition$session == 'test2'), ])
+summary(lm_recognition2)
+anova(lm_recognition2)
+```
+```{r}
+lm_sem1 <- lm(score ~ condition,  
+   data = data_sem[which(data_sem$session == 'test1'), ])
+summary(lm_sem1)
+anova(lm_sem1)
+```
+```{r}
+lm_sem2 <- lm(score ~ condition,  
+   data = data_sem[which(data_sem$session == 'test2'), ])
+summary(lm_sem2)
+anova(lm_sem2)
+```
